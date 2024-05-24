@@ -1,0 +1,27 @@
+SELECT  
+    n.Caption as [Node],  
+    n.detailsurl as [_linkfor_Node],  
+    '/Orion/images/StatusIcons/Small-' + n.Statusicon AS [_IconFor_Node],  
+    a.Name as Application,  
+    a.detailsurl as [_linkfor_Application],  
+    '/Orion/images/StatusIcons/Small-' + a.StatusDescription + '.gif' AS [_IconFor_Application],  
+    CASE WHEN s.[Last Healthy] IS NULL THEN 'Unknown'  
+    ELSE TOSTRING(s.[Last Healthy])  
+    END as [Last Healthy],  
+    ROUND((MinuteDiff(s.[Last Healthy], GETUTCDATE()) / 60.0), 1) as [Down Hours]  
+  
+FROM Orion.APM.Application a  
+JOIN Orion.Nodes n ON n.NodeID = a.NodeID  
+LEFT JOIN (  
+    SELECT MAX(TimeStamp) AS [Last Healthy], Availability, ApplicationID  
+    FROM Orion.APM.ApplicationStatus  
+    WHERE Availability = 1  
+    GROUP BY ApplicationID, Availability  
+) AS s ON s.ApplicationID = a.ApplicationID  
+JOIN Orion.ContainerMemberSnapshots cms ON n.NodeID = cms.EntityID  
+JOIN Orion.Container c ON cms.ContainerID = c.ContainerID  
+  
+WHERE a.Status = 2  
+AND c.Name = 'Test'  
+  
+ORDER BY s.[Last Healthy] DESC
