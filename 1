@@ -1,3 +1,20 @@
+WITH RECURSIVE GroupMembers AS (
+    SELECT 
+        cms.EntityID 
+    FROM 
+        Orion.ContainerMemberSnapshots cms
+    JOIN 
+        Orion.Container c ON cms.ContainerID = c.ContainerID
+    WHERE 
+        c.Name = 'OT'
+    UNION ALL
+    SELECT 
+        cms.EntityID
+    FROM 
+        Orion.ContainerMemberSnapshots cms
+    JOIN 
+        GroupMembers gm ON cms.ContainerID = gm.EntityID
+)
 SELECT  
     n.Caption as [Node],  
     n.detailsurl as [_linkfor_Node],  
@@ -9,19 +26,23 @@ SELECT
     ELSE TOSTRING(s.[Last Healthy])  
     END as [Last Healthy],  
     ROUND((MinuteDiff(s.[Last Healthy], GETUTCDATE()) / 60.0), 1) as [Down Hours]  
-  
-FROM Orion.APM.Application a  
-JOIN Orion.Nodes n ON n.NodeID = a.NodeID  
-LEFT JOIN (  
-    SELECT MAX(TimeStamp) AS [Last Healthy], Availability, ApplicationID  
-    FROM Orion.APM.ApplicationStatus  
-    WHERE Availability = 1  
-    GROUP BY ApplicationID, Availability  
+FROM 
+    Orion.APM.Application a  
+JOIN 
+    Orion.Nodes n ON n.NodeID = a.NodeID  
+LEFT JOIN (
+    SELECT 
+        MAX(TimeStamp) AS [Last Healthy], Availability, ApplicationID  
+    FROM 
+        Orion.APM.ApplicationStatus  
+    WHERE 
+        Availability = 1  
+    GROUP BY 
+        ApplicationID, Availability  
 ) AS s ON s.ApplicationID = a.ApplicationID  
-JOIN Orion.ContainerMemberSnapshots cms ON n.NodeID = cms.EntityID  
-JOIN Orion.Container c ON cms.ContainerID = c.ContainerID  
-  
-WHERE a.Status = 2  
-AND c.Name = 'Test'  
-  
-ORDER BY s.[Last Healthy] DESC
+JOIN 
+    GroupMembers gm ON n.NodeID = gm.EntityID
+WHERE 
+    a.Status = 2  
+ORDER BY 
+    s.[Last Healthy] DESC
